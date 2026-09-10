@@ -9,7 +9,7 @@ See what's listening on your ports — and why it's there.
 It does not tell you *which* of your six checkouts it came from, when it
 started, or how it got launched — which is what you actually wanted to know.
 
-![lsports in use](docs/demo.svg)
+![lsports in use](https://raw.githubusercontent.com/NagendraKammari/lsports/main/docs/demo.svg)
 
 Same data everyone else has, plus the context that identifies the process.
 
