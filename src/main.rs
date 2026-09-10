@@ -6,8 +6,16 @@ mod probe;
 mod render;
 
 use anyhow::Result;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use std::io::IsTerminal;
+
+#[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
+enum When {
+    /// Colour when stdout is a terminal.
+    Auto,
+    Always,
+    Never,
+}
 
 #[derive(Parser)]
 #[command(
@@ -29,18 +37,22 @@ struct Cli {
     #[arg(short, long)]
     long: bool,
 
-    /// Never emit colour (also honours the NO_COLOR environment variable).
-    #[arg(long)]
-    no_color: bool,
+    /// When to colourise. `always` is for piping into a pager or capturing
+    /// output; the NO_COLOR environment variable overrides `auto`.
+    #[arg(long, value_name = "WHEN", default_value = "auto")]
+    color: When,
 }
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    let use_color = !cli.no_color
-        && !cli.json
-        && std::env::var_os("NO_COLOR").is_none()
-        && std::io::stdout().is_terminal();
+    let use_color = match cli.color {
+        When::Never => false,
+        When::Always => true,
+        When::Auto => {
+            !cli.json && std::env::var_os("NO_COLOR").is_none() && std::io::stdout().is_terminal()
+        }
+    };
     color::set_enabled(use_color);
 
     let report = collect::collect(&cli.ports)?;
