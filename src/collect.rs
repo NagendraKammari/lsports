@@ -33,9 +33,12 @@ pub fn collect(filter: &[u16]) -> Result<Report> {
     let detail = ProcessRefreshKind::nothing()
         .with_cwd(UpdateKind::Always)
         .with_cmd(UpdateKind::Always)
-        .with_exe(UpdateKind::Always);
+        .with_exe(UpdateKind::Always)
+        .with_user(UpdateKind::Always);
     refresh(&mut sys, &listeners, detail);
     refresh_ancestors(&mut sys, &listeners, detail);
+
+    let my_uid = current_uid(&mut sys, detail);
 
     // Keyed on (pid, port) so a process listening on both IPv4 and IPv6 is one
     // row. Where the two differ, the wider binding wins — being reachable from
@@ -88,6 +91,10 @@ pub fn collect(filter: &[u16]) -> Result<Report> {
             uptime_secs: Some(proc.run_time()),
             git,
             ancestry: ancestry(&sys, pid),
+            same_user: match (&my_uid, proc.user_id()) {
+                (Some(mine), Some(theirs)) => Some(mine == theirs),
+                _ => None,
+            },
         };
 
         best.entry((pid_raw, tcp.local_port))
@@ -134,6 +141,14 @@ pub fn collect(filter: &[u16]) -> Result<Report> {
         blocked_ports,
         requested: filter.to_vec(),
     })
+}
+
+/// The uid this process runs as, read by asking the system about ourselves so
+/// no platform-specific call is needed.
+fn current_uid(sys: &mut System, kind: ProcessRefreshKind) -> Option<sysinfo::Uid> {
+    let me = sysinfo::get_current_pid().ok()?;
+    refresh(sys, &[me], kind);
+    sys.process(me)?.user_id().cloned()
 }
 
 /// Load just these processes. `remove_dead_processes` stays false because these

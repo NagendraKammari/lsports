@@ -1,13 +1,39 @@
 mod collect;
 mod color;
+mod free;
 mod git;
 mod model;
 mod probe;
 mod render;
 
 use anyhow::Result;
-use clap::{Parser, ValueEnum};
+use clap::{Parser, Subcommand, ValueEnum};
 use std::io::IsTerminal;
+
+#[derive(Subcommand)]
+enum Command {
+    /// Terminate whatever is listening on the given ports.
+    ///
+    /// Shows what it found, asks before acting, sends SIGTERM before SIGKILL,
+    /// and refuses to signal processes belonging to another user.
+    Free {
+        /// Ports to release, e.g. `3000 8080`.
+        #[arg(required = true)]
+        ports: Vec<u16>,
+
+        /// Skip both prompts, escalating to SIGKILL if SIGTERM is ignored.
+        #[arg(short = 'y', long)]
+        yes: bool,
+
+        /// Report what would be signalled, then stop.
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Seconds to allow for a graceful exit before offering SIGKILL.
+        #[arg(long, value_name = "SECS", default_value = "5")]
+        grace: u64,
+    },
+}
 
 #[derive(Clone, Copy, PartialEq, Eq, ValueEnum)]
 enum When {
@@ -26,6 +52,9 @@ enum When {
                   working directory, git branch, uptime, and how the process was launched."
 )]
 struct Cli {
+    #[command(subcommand)]
+    command: Option<Command>,
+
     /// Ports to inspect, e.g. `3000 8080`. Omit to list everything.
     ports: Vec<u16>,
 
@@ -54,6 +83,22 @@ fn main() -> Result<()> {
         }
     };
     color::set_enabled(use_color);
+
+    if let Some(Command::Free {
+        ports,
+        yes,
+        dry_run,
+        grace,
+    }) = &cli.command
+    {
+        let opts = free::Options {
+            yes: *yes,
+            dry_run: *dry_run,
+            grace: *grace,
+        };
+        // A port left occupied is a failure a script needs to detect.
+        std::process::exit(if free::run(ports, &opts)? { 0 } else { 1 });
+    }
 
     let report = collect::collect(&cli.ports)?;
 

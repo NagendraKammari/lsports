@@ -45,6 +45,10 @@ pub struct Entry {
     /// Nearest ancestors, closest first. Empty when the process was reparented
     /// to init/launchd, which is the common case for daemons.
     pub ancestry: Vec<Ancestor>,
+    /// Whether the process runs as the current user. `None` when the platform
+    /// would not say. `free` refuses to signal anything that is a definite
+    /// `false`, so an unknown must never be treated as a denial.
+    pub same_user: Option<bool>,
 }
 
 /// A whole-run result, including what we could *not* see.

@@ -67,48 +67,60 @@ pub fn detail(report: &Report) -> String {
     }
 
     for e in &report.entries {
-        out.push_str(&format!(
-            "{}  {}\n",
-            cyan(&bold(&format!(":{}", e.port))),
-            bold(&label(e))
-        ));
-
-        let mut facts = vec![format!("pid {}", e.pid)];
-        if let Some(secs) = e.uptime_secs {
-            facts.push(format!("up {}", duration(secs)));
-        }
-        facts.push(reach_text(e));
-        out.push_str(&format!("       {}\n", dim(&facts.join(" · "))));
-
-        if let Some(cwd) = useful_cwd(e) {
-            let mut line = format!("cwd  {}", tildify(cwd));
-            if let Some(git) = &e.git {
-                line.push_str(&format!("  ({})", green(&format!("git: {}", git.branch))));
-            }
-            out.push_str(&format!("       {line}\n"));
-        }
-
-        if !e.ancestry.is_empty() {
-            let chain = e
-                .ancestry
-                .iter()
-                .map(|a| a.name.as_str())
-                .collect::<Vec<_>>()
-                .join(" ← ");
-            out.push_str(&format!("       via  {}\n", dim(&chain)));
-        }
-
-        if let Some(cmd) = &e.cmd {
-            if !cmd.is_empty() {
-                out.push_str(&format!("       cmd  {}\n", dim(&clip(cmd, 78))));
-            }
-        }
-        out.push('\n');
+        out.push_str(&entry_block(e));
     }
 
     for note in notes(report) {
         out.push_str(&dim(&format!("{note}\n")));
     }
+    out
+}
+
+/// The same per-entry block as `detail`, for callers holding a subset of
+/// entries rather than a whole report.
+pub fn detail_of(entries: &[&Entry]) -> String {
+    entries.iter().map(|e| entry_block(e)).collect()
+}
+
+fn entry_block(e: &Entry) -> String {
+    let mut out = String::new();
+    out.push_str(&format!(
+        "{}  {}\n",
+        cyan(&bold(&format!(":{}", e.port))),
+        bold(&label(e))
+    ));
+
+    let mut facts = vec![format!("pid {}", e.pid)];
+    if let Some(secs) = e.uptime_secs {
+        facts.push(format!("up {}", duration(secs)));
+    }
+    facts.push(reach_text(e));
+    out.push_str(&format!("       {}\n", dim(&facts.join(" · "))));
+
+    if let Some(cwd) = useful_cwd(e) {
+        let mut line = format!("cwd  {}", tildify(cwd));
+        if let Some(git) = &e.git {
+            line.push_str(&format!("  ({})", green(&format!("git: {}", git.branch))));
+        }
+        out.push_str(&format!("       {line}\n"));
+    }
+
+    if !e.ancestry.is_empty() {
+        let chain = e
+            .ancestry
+            .iter()
+            .map(|a| a.name.as_str())
+            .collect::<Vec<_>>()
+            .join(" ← ");
+        out.push_str(&format!("       via  {}\n", dim(&chain)));
+    }
+
+    if let Some(cmd) = &e.cmd {
+        if !cmd.is_empty() {
+            out.push_str(&format!("       cmd  {}\n", dim(&clip(cmd, 78))));
+        }
+    }
+    out.push('\n');
     out
 }
 

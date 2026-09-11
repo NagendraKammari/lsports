@@ -35,6 +35,12 @@ jobs:
           cargo run --locked --quiet -- 65000 | grep -q "nothing is listening on port 65000"
           cargo run --locked --quiet -- --long > /dev/null
 
+          # `free` on an idle port must succeed without prompting, so it is safe
+          # to call unconditionally in a script. Nothing listens on 65000, so
+          # this exercises the command without signalling anything.
+          cargo run --locked --quiet -- free 65000 | grep -q "nothing to free"
+          cargo run --locked --quiet -- free 65000 --dry-run > /dev/null
+
   lint:
     runs-on: ubuntu-latest
     steps:

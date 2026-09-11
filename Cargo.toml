@@ -1,6 +1,6 @@
 [package]
 name = "lsports"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 rust-version = "1.86"
 description = "See what's listening on your ports — and why it's there. Shows working directory, git branch, uptime and launch chain for every listener."

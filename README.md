@@ -16,6 +16,7 @@ Same data everyone else has, plus the context that identifies the process.
 ## Install
 
 ```console
+brew install NagendraKammari/tap/lsports
 cargo install lsports
 ```
 
@@ -28,10 +29,39 @@ Or download a binary for macOS, Linux or Windows from
 $ lsports                  # everything you can see
 $ lsports 3000             # one port, in detail
 $ lsports 3000 8080        # several ports
+$ lsports free 3000        # release the port
 $ lsports --long           # full detail for every row
 $ lsports --json           # machine-readable
 $ lsports --color always   # keep colour when piping, e.g. into `less -R`
 ```
+
+### Freeing a port, carefully
+
+`lsports free 3000` is the one command that changes anything, so it is
+deliberately cautious. It shows you what it found *before* acting, sends
+`SIGTERM` and waits, and only then offers `SIGKILL`:
+
+```console
+$ lsports free 3000
+:3000  node
+       pid 33846 · up 1m · 127.0.0.1 only
+       cwd  ~/work/api-gateway  (git: feat/rate-limit)
+       cmd  node server.js
+
+Terminate node (pid 33846)? [y/N] y
+freed :3000
+```
+
+- It **refuses to signal another user's process**, rather than suggesting you
+  re-run under `sudo` to terminate something that isn't yours.
+- With no terminal to prompt from it **errors instead of assuming yes**, so a
+  script cannot silently kill something. Pass `--yes` to mean it.
+- `--yes` escalates to `SIGKILL` automatically; interactively that needs a
+  second confirmation.
+- `--dry-run` reports what would be signalled and stops.
+- Exit code is `0` when the port ends up free — including when nothing was
+  listening in the first place, so it is safe to call unconditionally — and `1`
+  when the port is still occupied.
 
 ### It tells you when a port is exposed
 
@@ -70,6 +100,7 @@ nothing is listening on port 9999
 | launch chain | no | yes |
 | exposed-binding warning | no | yes |
 | distinguishes "free" from "hidden" | no | yes |
+| frees the port | no (`kill -9`) | `lsports free 3000` |
 | memorable invocation | `lsof -nP -iTCP:3000 -sTCP:LISTEN` | `lsports 3000` |
 
 ## Notes
@@ -94,9 +125,9 @@ nothing is listening on port 9999
 
 ## Roadmap
 
-- `lsports free 3000` — graceful `SIGTERM`, confirm before `SIGKILL`
 - `lsports --wait-for-free 3000` — block until a port is released, for scripts
 - container attribution (Docker, Colima, Podman)
+- shell completions
 - UDP
 
 ## License
